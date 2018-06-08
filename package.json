@@ -1,0 +1,27 @@
+{
+  "name": "motet",
+  "version": "1.0.0",
+  "description": "An music database Chromecast audio sender service",
+  "main": "motet.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/opengd/motet.git"
+  },
+  "keywords": [
+    "audio",
+    "music",
+    "chromecast"
+  ],
+  "author": "opengd",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/opengd/motet/issues"
+  },
+  "homepage": "https://github.com/opengd/motet#readme",
+  "dependencies": {
+    "express": "^4.16.3"
+  }
+}
