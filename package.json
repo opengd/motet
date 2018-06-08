@@ -4,6 +4,7 @@
   "description": "An music database Chromecast audio sender service",
   "main": "motet.js",
   "scripts": {
+    "start": "motet.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -22,6 +23,8 @@
   },
   "homepage": "https://github.com/opengd/motet#readme",
   "dependencies": {
-    "express": "^4.16.3"
+    "express": "^4.16.3",
+    "lowdb": "^1.0.0",
+    "music-metadata": "^2.0.1"
   }
 }
