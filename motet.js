@@ -6,6 +6,9 @@ const util = require('util');
 
 const hasha = require('hasha');
 
+const express = require('express')
+const app = express()
+
 const lodashId = require('lodash-id');
 const low = require('lowdb');
 const FileSync = require('lowdb/adapters/FileSync');
@@ -32,41 +35,11 @@ klaw('C:\\Users\\ejevi\\Music')
       mm.parseFile(item.path)
         .then(meta => {
             console.log("Meta OK");
-            console.log("Save to db");
-            var m = meta.common.artist ? meta.common.artist : meta.common.artists[0]; 
-            m += meta.common.title +
-                meta.common.track.no +
-                meta.common.album +
-                meta.format.dataformat +
-                meta.format.bitrate + 
-                meta.format.sampleRate +
-                meta.format.numberOfChannels +
-                meta.format.duration;
-            console.log(m);
-            var md5 = hasha(m, {algorithm: 'md5'});
             
-            const post = db
-                .get('music')
-                .find({ md5: md5 })
-                .value();
+            var md5 = getMetaHash(meta);
             
-            console.log(post);
-            if(!post) {
-                db.get('music')
-                    .push({
-                        "md5": md5,  
-                        "path": item.path, 
-                        "artist": meta.common.artist ? meta.common.artist : meta.common.artists[0],
-                        "title": meta.common.title,
-                        "track": meta.common.track.no,
-                        "album": meta.common.album,
-                        "dataformat": meta.format.dataformat,
-                        "bitrate": meta.format.bitrate,
-                        "sampleRate": meta.format.sampleRate,
-                        "numberOfChannels": meta.format.numberOfChannels,
-                        "duration": meta.format.duration
-                    })
-                    .write();
+            if(!isFileinDb(md5)) {
+                addMusicFileToDb(item, meta, md5);
                 added++;
                 console.log("Saved to db");
             } else {
@@ -78,4 +51,67 @@ klaw('C:\\Users\\ejevi\\Music')
     })
   .on('end', () => console.log("Added to db: " + added));
 
-  console.log("Added to db: " + added);
+
+app.get('/', (req, res) => { 
+    var options = {
+        root: __dirname,
+      };
+    res.sendFile('index.html', options);
+});
+
+app.get('/list', (req, res) => { 
+    res.json(db.get('music').value());
+});
+
+app.get('/music/:md5', (req, res) => { 
+    var post = isFileinDb(req.params.md5);
+    if(post) {
+        res.sendFile(post.path);
+    } else {
+        res.sendStatus(404);
+    }    
+});
+
+app.listen(3000, () => console.log('Example app listening on port 3000!'));
+
+
+function getMetaHash(meta) {
+    var m = meta.common.artist ? meta.common.artist : meta.common.artists[0]; 
+    m += meta.common.title +
+        meta.common.track.no +
+        meta.common.album +
+        meta.format.dataformat +
+        meta.format.bitrate + 
+        meta.format.sampleRate +
+        meta.format.numberOfChannels +
+        meta.format.duration;
+
+    return hasha(m, {algorithm: 'md5'});
+}
+
+function isFileinDb(md5) {
+    const post = db
+        .get('music')
+        .find({ md5: md5 })
+        .value();
+    
+    return post ? post : false;
+}
+
+function addMusicFileToDb(item, meta, md5) {
+    db.get('music')
+    .push({
+        "md5": md5,  
+        "path": item.path, 
+        "artist": meta.common.artist ? meta.common.artist : meta.common.artists[0],
+        "title": meta.common.title,
+        "track": meta.common.track.no,
+        "album": meta.common.album,
+        "dataformat": meta.format.dataformat,
+        "bitrate": meta.format.bitrate,
+        "sampleRate": meta.format.sampleRate,
+        "numberOfChannels": meta.format.numberOfChannels,
+        "duration": meta.format.duration
+    })
+    .write();
+}

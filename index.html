@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Hello World</title>
+    <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js"></script>
+    <script src="https://www.gstatic.com/cast/sdk/libs/sender/1.0/cast_framework.js"></script> 
+    <script src="https://unpkg.com/react@16/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6.15.0/babel.min.js"></script>
+  </head>
+  <body>
+    <button is="google-cast-button"></button>
+    <div id="root"></div>
+    
+    <script>
+        window['__onGCastApiAvailable'] = function(isAvailable) {
+            if (isAvailable) {
+            initializeCastApi();
+            }
+        };
+
+        var player = null;
+        var playerController = null;
+        var connected = null;
+
+        initializeCastApi = function() {
+            cast.framework.CastContext.getInstance().setOptions({
+                receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
+                autoJoinPolicy: chrome.cast.AutoJoinPolicy.ORIGIN_SCOPED
+            });
+
+            console.log(cast.framework.CastContext.getInstance());
+            
+            player = new cast.framework.RemotePlayer();
+            playerController = new cast.framework.RemotePlayerController(player);
+
+            playerController.addEventListener(
+                cast.framework.RemotePlayerEventType.IS_CONNECTED_CHANGED, 
+                event => {
+                    console.log(event);
+                    if(player.isConnected) {
+                        connected = true;
+                        console.log("player.isConnected");
+                    }
+                }
+            );
+        };
+
+    </script>
+
+    <script type="text/babel">
+
+    class Motet extends React.Component {
+        constructor(props) {
+            super(props);
+            this.state = {
+                error: null,
+                isLoaded: false,
+                items: []
+              };
+
+            this.playMusic = this.playMusic.bind(this);
+        }
+
+        componentDidMount() {
+            //this.setState({button: <button is="google-cast-button"></button>});
+            //document.createElement('<button is="google-cast-button"></button>')
+            
+            //var b = document.createElement('button', { is : 'google-cast-button' });
+            //document.getElementById("root").appendChild(b);
+
+            fetch('http://192.168.8.101:3000/list')
+                .then(res => res.json())
+                .then(result => {
+                    this.setState({
+                        error: null,
+                        isLoaded: true,
+                        items: result
+                      });
+                },
+                error => {
+                    this.setState({
+                        error: error,
+                        isLoaded: false
+                      });
+                })
+        }
+      
+        componentWillUnmount() {
+      
+        }
+
+        playMusic(id, e) {
+            console.log(id);
+            console.log(e);
+
+            if(connected) {
+                console.log("Jag är kopplad");
+                var castSession = cast.framework.CastContext.getInstance().getCurrentSession();
+                console.log(castSession);
+                var currentMediaURL = "http://192.168.8.101:3000/music/" + id;
+                var contentType = "audio/mpeg3";
+                var mediaInfo = new chrome.cast.media.MediaInfo(currentMediaURL, contentType);
+                var request = new chrome.cast.media.LoadRequest(mediaInfo);
+                castSession.loadMedia(request).then(
+                    () => { console.log('Load succeed'); },
+                    errorCode => { console.log('Error code: ' + errorCode); });
+            } else {
+                console.log("Nej jag är inte kopplad")
+            } 
+        }
+
+        render() {
+            const { error, isLoaded, items } = this.state;
+            if (error) {
+              return <div>Error: {error.message}</div>;
+            } else if (!isLoaded) {
+              return <div>Loading...</div>;
+            } else {
+              return (
+                <ul>
+                  {items.map(item => (
+                    <li>
+                        <button onClick={(e) => this.playMusic(item.md5, e)}>Play</button>{item.title} {item.md5} {item.artist}
+                    </li>
+                  ))}
+                </ul>
+              );
+            }
+        }
+    }
+
+      ReactDOM.render(
+        <Motet />,
+        document.getElementById('root')
+      );
+
+    </script>
+    <!--
+      Note: this page is a great way to try React but it's not suitable for production.
+      It slowly compiles JSX with Babel in the browser and uses a large development build of React.
+
+      To set up a production-ready React build environment, follow these instructions:
+      * https://reactjs.org/docs/add-react-to-a-new-app.html
+      * https://reactjs.org/docs/add-react-to-an-existing-app.html
+
+      You can also use React without JSX, in which case you can remove Babel:
+      * https://reactjs.org/docs/react-without-jsx.html
+      * https://reactjs.org/docs/cdn-links.html
+    -->    
+  </body>
+</html>
