@@ -81,8 +81,14 @@ app.get('/artists', (req, res) => {
         .value());
 });
 
-app.get('/artist/:artist/albums', (req, res) => { 
+app.get('/artist/:artist', (req, res) => { 
     console.log(req.params.artist);
+    console.log(db.get('music')
+    .filter({artist: req.params.artist})
+    .map('album')
+    .uniq()
+    .sort()
+    .value());
 
     res.json(db.get('music')
     .filter({artist: req.params.artist})
@@ -90,13 +96,9 @@ app.get('/artist/:artist/albums', (req, res) => {
     .uniq()
     .sort()
     .value());
-
-    //res.send(req.params.artist);
 });
 
-app.get('/artist/:artist/album/:album', (req, res) => { 
-    //res.json(db.get('music').value());
-    
+app.get('/artist/:artist/album/:album', (req, res) => {     
     res.json(db.get('music')
     .filter({artist: req.params.artist, album: req.params.album})
     .sortBy('track')
