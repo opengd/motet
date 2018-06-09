@@ -79,14 +79,19 @@
                 artists: [],
                 songs: [],
                 artist: null,
-                album: null
+                album: null,
               };
 
             this.playMusic = this.playMusic.bind(this);
             this.addSongToQueue = this.addSongToQueue.bind(this);
-
+            
+            this.getArtists_OnClick = this.getArtists_OnClick.bind(this);
             this.getArtistAlbums_OnClick = this.getArtistAlbums_OnClick.bind(this);
             this.getArtistAlbumSongs_OnClick = this.getArtistAlbumSongs_OnClick.bind(this);
+        }
+
+        getArtists_OnClick(e) {
+            this.getArtists();
         }
 
         getArtistAlbums_OnClick(artist, e) {
@@ -182,30 +187,7 @@
         }
 
         componentDidMount() {
-            //this.setState({button: <button is="google-cast-button"></button>});
-            //document.createElement('<button is="google-cast-button"></button>')
-            
-            //var b = document.createElement('button', { is : 'google-cast-button' });
-            //document.getElementById("root").appendChild(b);
-            /*
-            fetch(location.origin + '/list')
-                .then(res => res.json())
-                .then(result => {
-                    this.setState({
-                        error: null,
-                        isLoaded: true,
-                        items: result
-                      });
-                },
-                error => {
-                    this.setState({
-                        error: error,
-                        isLoaded: false
-                      });
-                })
-                */
             this.getArtists();
-            //this.getAlbums();
         }
       
         componentWillUnmount() {
@@ -221,9 +203,9 @@
                 case "ogg":
                     return "audio/ogg";
                 case "opus":
-                    return "audio/opus";
-                
+                    return "audio/opus";              
             }
+            return "audio/mpeg3";
         }
 
         getSongMetadata(item) {
@@ -308,9 +290,9 @@
         getAlbumsList(items) {
             return (<div className="list-group list-group-flush">
                     {items.map(album => (
-                      <button type="button" onClick={(e) => this.getArtistAlbumSongs_OnClick(album, e)} className="list-group-item list-group-item-action">
+                      <a href="#" onClick={(e) => this.getArtistAlbumSongs_OnClick(album, e)} className="list-group-item list-group-item-action">
                           {album}
-                      </button>
+                      </a>
                     ))}
                 </div>);
         }
@@ -318,9 +300,9 @@
         getArtistsList(items) {
             return (<div className="list-group list-group-flush">
                     {items.map(artist => (
-                      <button type="button" onClick={(e) => this.getArtistAlbums_OnClick(artist, e)} className="list-group-item list-group-item-action">
+                      <a href="#" onClick={(e) => this.getArtistAlbums_OnClick(artist, e)} className="list-group-item list-group-item-action">
                           {artist}
-                      </button>
+                      </a>
                     ))}
                     </div>);
         }
@@ -334,18 +316,38 @@
             } else if (artists) {
                 return (
                     <div>
-                        {this.getArtistsList(artists)}
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item active" aria-current="page">Artists</li>
+                        </ol>
+                    </nav>
+                    {this.getArtistsList(artists)}
                     </div>
               );
             } else if (albums) {
                 return (
                     <div>
+                    <nav aria-label="breadcrumb">
+                        <ol className="breadcrumb">
+                            <li className="breadcrumb-item"><a href="#" onClick={(e) => this.getArtists_OnClick(e)}>Artists</a></li>
+                            <li className="breadcrumb-item active" aria-current="page">{this.state.artist}</li>
+                        </ol>
+                    </nav>
+                    
                         {this.getAlbumsList(albums)}
                     </div>
                 );
             } else if (songs) {
                 return (
                     <div>
+                    <nav aria-label="breadcrumb">
+                        <ol className="breadcrumb">
+                            <li className="breadcrumb-item"><a href="#" onClick={(e) => this.getArtists_OnClick(e)}>Artists</a></li>
+                            <li className="breadcrumb-item"><a href="#" onClick={(e) => this.getArtistAlbums_OnClick(this.state.artist, e)}>{this.state.artist}</a></li>
+                            <li className="breadcrumb-item active" aria-current="page">{this.state.album}</li>
+                        </ol>
+                    </nav>
+                    
                         {this.getSongList(songs)}
                     </div>
                 );
