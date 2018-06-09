@@ -4,7 +4,7 @@
   "description": "An music database Chromecast audio sender service",
   "main": "motet.js",
   "scripts": {
-    "start": "motet.js",
+    "start": "node motet.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

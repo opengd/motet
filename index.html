@@ -24,6 +24,8 @@
         var playerController = null;
         var connected = null;
 
+        console.log(location.origin);
+
         initializeCastApi = function() {
             cast.framework.CastContext.getInstance().setOptions({
                 receiverApplicationId: chrome.cast.media.DEFAULT_MEDIA_RECEIVER_APP_ID,
@@ -70,7 +72,7 @@
             //var b = document.createElement('button', { is : 'google-cast-button' });
             //document.getElementById("root").appendChild(b);
 
-            fetch('http://192.168.8.101:3000/list')
+            fetch(location.origin + '/list')
                 .then(res => res.json())
                 .then(result => {
                     this.setState({
@@ -91,17 +93,23 @@
       
         }
 
-        playMusic(id, e) {
-            console.log(id);
+        playMusic(item, e) {
+            console.log(item.md5);
             console.log(e);
 
             if(connected) {
                 console.log("Jag är kopplad");
                 var castSession = cast.framework.CastContext.getInstance().getCurrentSession();
                 console.log(castSession);
-                var currentMediaURL = "http://192.168.8.101:3000/music/" + id;
+                var currentMediaURL = location.origin + "/music/" + item.md5;
                 var contentType = "audio/mpeg3";
                 var mediaInfo = new chrome.cast.media.MediaInfo(currentMediaURL, contentType);
+                var meta = new chrome.cast.media.MusicTrackMediaMetadata();
+                meta.artist = item.artist;
+                meta.title = item.title;
+                meta.track = item.track;
+                meta.albumName = item.album;
+                mediaInfo.metadata = meta;
                 var request = new chrome.cast.media.LoadRequest(mediaInfo);
                 castSession.loadMedia(request).then(
                     () => { console.log('Load succeed'); },
@@ -122,7 +130,7 @@
                 <ul>
                   {items.map(item => (
                     <li>
-                        <button onClick={(e) => this.playMusic(item.md5, e)}>Play</button>{item.title} {item.md5} {item.artist}
+                        <button onClick={(e) => this.playMusic(item, e)}>Play</button>{item.title} {item.md5} {item.artist}
                     </li>
                   ))}
                 </ul>
