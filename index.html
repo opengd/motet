@@ -59,10 +59,48 @@
             this.state = {
                 error: null,
                 isLoaded: false,
-                items: []
+                items: [],
+                albums: [],
+                artists: []
               };
 
             this.playMusic = this.playMusic.bind(this);
+        }
+
+        getArtists() {
+            fetch(location.origin + '/artists')
+                .then(res => res.json())
+                .then(result => {
+                    this.setState({
+                        error: null,
+                        isLoaded: true,
+                        artists: result
+                    });
+                },
+                error => {
+                    this.setState({
+                        error: error,
+                        isLoaded: false
+                    });
+                })
+        }
+
+        getAlbums() {
+            fetch(location.origin + '/albums')
+                .then(res => res.json())
+                .then(result => {
+                    this.setState({
+                        error: null,
+                        isLoaded: true,
+                        albums: result
+                    });
+                },
+                error => {
+                    this.setState({
+                        error: error,
+                        isLoaded: false
+                    });
+                })
         }
 
         componentDidMount() {
@@ -87,10 +125,26 @@
                         isLoaded: false
                       });
                 })
+            this.getArtists();
+            this.getAlbums();
         }
       
         componentWillUnmount() {
       
+        }
+
+        getContentType(dataformat) {
+            switch(dataformat) {
+                case "mp3":
+                    return "audio/mpeg3";
+                case "flac":
+                    return "audio/flac";
+                case "ogg":
+                    return "audio/ogg";
+                case "opus":
+                    return "audio/opus";
+                
+            }
         }
 
         playMusic(item, e) {
@@ -102,7 +156,7 @@
                 var castSession = cast.framework.CastContext.getInstance().getCurrentSession();
                 console.log(castSession);
                 var currentMediaURL = location.origin + "/music/" + item.md5;
-                var contentType = "audio/mpeg3";
+                var contentType = this.getContentType(item.dataformat);
                 var mediaInfo = new chrome.cast.media.MediaInfo(currentMediaURL, contentType);
                 var meta = new chrome.cast.media.MusicTrackMediaMetadata();
                 meta.artist = item.artist;
@@ -120,13 +174,14 @@
         }
 
         render() {
-            const { error, isLoaded, items } = this.state;
+            const { error, isLoaded, items, artists, albums } = this.state;
             if (error) {
               return <div>Error: {error.message}</div>;
             } else if (!isLoaded) {
               return <div>Loading...</div>;
             } else {
               return (
+                  <div>
                 <ul>
                   {items.map(item => (
                     <li>
@@ -134,6 +189,21 @@
                     </li>
                   ))}
                 </ul>
+                <ul>
+                    {artists.map(artist => (
+                      <li>
+                          {artist}
+                      </li>
+                    ))}
+                </ul>
+                <ul>
+                    {albums.map(album => (
+                      <li>
+                          {album}
+                      </li>
+                    ))}
+                </ul>
+            </div>
               );
             }
         }

@@ -21,8 +21,18 @@ db._.mixin(lodashId);
 db.defaults({ music: [] })
   .write()
 
+function extCheck(filepath) {
+    var extname = path.extname(filepath);
+    if(extname === '.mp3' || 
+        extname === '.flac' || 
+        extname === '.ogg' || 
+        extname === '.opus') return true;
+    
+    return false;
+}
+
 const excludeDirFilter = through2.obj(function (item, enc, next) {
-    if (!item.stats.isDirectory() && (path.extname(item.path) === '.mp3')) this.push(item);
+    if (!item.stats.isDirectory() && extCheck(item.path)) this.push(item);
     next();
   });
 
@@ -61,6 +71,44 @@ app.get('/', (req, res) => {
 
 app.get('/list', (req, res) => { 
     res.json(db.get('music').value());
+});
+
+app.get('/artists', (req, res) => { 
+    res.json(db.get('music')
+        .map('artist')
+        .uniq()
+        .sort()
+        .value());
+});
+
+app.get('/artist/:artist/albums', (req, res) => { 
+    console.log(req.params.artist);
+
+    res.json(db.get('music')
+    .filter({artist: req.params.artist})
+    .map('album')
+    .uniq()
+    .sort()
+    .value());
+
+    //res.send(req.params.artist);
+});
+
+app.get('/artist/:artist/album/:album', (req, res) => { 
+    //res.json(db.get('music').value());
+    
+    res.json(db.get('music')
+    .filter({artist: req.params.artist, album: req.params.album})
+    .sortBy('track')
+    .value());
+});
+
+app.get('/albums', (req, res) => { 
+    res.json(db.get('music')
+    .map('album')
+    .uniq()
+    .sort()
+    .value());
 });
 
 app.get('/music/:md5', (req, res) => { 
