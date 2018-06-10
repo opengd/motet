@@ -19,6 +19,7 @@
     <div class="mb-2">
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
             <a class="navbar-brand" href="#">Motet</a>
+            <div id="status"></div>
             <span class="ml-auto">
                 <button is="google-cast-button" class="border-0 my-2 my-sm-0" style="height: 30px; width: 30px; background-color: transparent"></button>
             </span>
@@ -391,7 +392,7 @@
         render() {
             const { isLoaded, items, artists, albums, songs } = this.state;
             if (!isLoaded) {
-              return <div><i class="fas fa-spinner fa-pulse"></i></div>;
+              return <div><i className="fas fa-spinner fa-pulse"></i></div>;
             } else if (artists) {
                 return (
                     <div>
@@ -435,9 +436,72 @@
         }
     }
 
+    class Status extends React.Component {
+        constructor(props) {
+            super(props);
+
+            this.state = {db_update: false};
+
+            this.updateDabase_OnClick = this.updateDabase_OnClick.bind(this);
+        }
+
+        componentDidMount() {
+            this.checkStatusTimer = setInterval(
+                () => this.getStatus(),
+                5000
+            );
+        }
+
+        componentWillUnmount() {
+            clearInterval(this.checkStatusTimer);
+        }
+
+        getStatus() {
+            fetch(location.origin + '/status')
+            .then(res => res.json())
+            .then(result => {
+                //console.log(result);
+                this.setState({db_update: result.db_update});
+                
+                //if(!result.db_update && this.checkStatusTimer) { 
+                //    clearInterval(this.checkStatusTimer);
+                //    this.checkStatusTimer = null;
+                //}
+            },
+            error => {
+                console.log(error);
+            });
+        }
+
+        updateDabase_OnClick(e) {
+            fetch(location.origin + '/config/database/update')
+            .then(res => res.json())
+            .then(result => {
+                //console.log(result);
+                this.setState({db_update: result.db_update});
+            },
+            error => {
+                console.log(error);
+            });
+        }
+
+        render() {
+            if(this.state.db_update) {
+                return (<div><i className="fas fa-spinner fa-pulse ml-4" style={{color: "White"}}></i></div>);
+            }
+            
+            return (<button type="button" className="btn btn-outline-success ml-4" onClick={(e) => this.updateDabase_OnClick(e)}>Update database</button>);
+        }
+    }
+
       ReactDOM.render(
         <Motet />,
         document.getElementById('root')
+      );
+
+      ReactDOM.render(
+        <Status />,
+        document.getElementById('status')
       );
 
     </script>

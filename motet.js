@@ -31,42 +31,75 @@ function extCheck(filepath) {
     return false;
 }
 
-const excludeDirFilter = through2.obj(function (item, enc, next) {
-    if (!item.stats.isDirectory() && extCheck(item.path)) this.push(item);
-    next();
-  });
+
 
 const items = []; // files, directories, symlinks, etc
 var added = 0;
-klaw('C:\\Users\\ejevi\\Music')
-  .pipe(excludeDirFilter)
-  .on('data', item => {
-      console.log("Get meta from: " + item.path);
-      mm.parseFile(item.path)
-        .then(meta => {
-            console.log("Meta OK");
-            
-            var md5 = getMetaHash(meta);
-            
-            if(!isFileinDb(md5)) {
-                addMusicFileToDb(item, meta, md5);
-                added++;
-                console.log("Saved to db");
-            } else {
-                console.log("Already in db");
-            }
-        })
-        .catch(error => console.log(error))
-      items.push(item.path);
-    })
-  .on('end', () => console.log("Added to db: " + added));
 
+var db_update = false;
+
+function updateDatabase() {
+    const excludeDirFilter = through2.obj(function (item, enc, next) {
+        if (!item.stats.isDirectory() && extCheck(item.path)) this.push(item);
+        next();
+      });
+    db_update = true;
+    klaw('C:\\Users\\ejevi\\Music')
+    .pipe(excludeDirFilter)
+    .on('data', item => {
+        //console.log("Get meta from: " + item.path);
+        
+        /*
+        var someReadStream = fs.createReadStream(item.path);
+
+        mm.parseStream(someReadStream, path.extname(item.path) === '.mp3' ? 'audio/mpeg' : 'audio/flac')
+        .then( function (metadata) {
+           console.log(util.inspect(metadata, { showHidden: false, depth: null }));
+           someReadStream.close();
+         });
+         */
+        
+        mm.parseFile(item.path, {skipCovers: true, duration: true})
+            .then(meta => {
+                //console.log("Meta OK");
+                
+                var md5 = getMetaHash(meta);
+                
+                if(!isFileinDb(md5)) {
+                    addMusicFileToDb(item, meta, md5);
+                    added++;
+                    console.log("OK: " + item.path)
+                    //console.log("Saved to db");
+                } else {
+                    //console.log("Already in db");
+                }
+            })
+            .catch(error => {
+                //console.log(path.extname(item.path));
+                console.log("ERROR: " + item.path) 
+                //console.log(error); 
+            })
+                
+        items.push(item.path);
+        
+        })
+    .on('end', () => {db_update = false} );
+}
 
 app.get('/', (req, res) => { 
     var options = {
         root: __dirname,
       };
     res.sendFile('index.html', options);
+});
+
+app.get('/status', (req, res) => { 
+    res.json({"db_update": db_update});
+});
+
+app.get('/config/database/update', (req, res) => { 
+    res.json({"db_update": true});
+    updateDatabase();
 });
 
 app.get('/list', (req, res) => { 
@@ -132,7 +165,7 @@ app.get('/queue/:md5', (req, res) => {
         .value();
 
         console.log(songs.drop(songs.findIndex(o => o.md5 == req.params.md5)));
-        
+
         res.json(songs.drop(songs.findIndex(o => o.md5 == req.params.md5)));
         //res.sendFile(post.path);
     } else {
