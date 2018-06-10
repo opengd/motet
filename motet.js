@@ -122,6 +122,24 @@ app.get('/music/:md5', (req, res) => {
     }    
 });
 
+app.get('/queue/:md5', (req, res) => { 
+    var post = isFileinDb(req.params.md5);
+    if(post) {
+
+        var songs = db.get('music')
+        .filter({artist: post.artist, album: post.album})
+        .sortBy('track')
+        .value();
+
+        console.log(songs.drop(songs.findIndex(o => o.md5 == req.params.md5)));
+        
+        res.json(songs.drop(songs.findIndex(o => o.md5 == req.params.md5)));
+        //res.sendFile(post.path);
+    } else {
+        res.sendStatus(404);
+    }    
+});
+
 app.listen(3000, () => console.log('Example app listening on port 3000!'));
 
 

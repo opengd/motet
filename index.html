@@ -16,11 +16,11 @@
     <script defer src="https://use.fontawesome.com/releases/v5.0.13/js/all.js" integrity="sha384-xymdQtn1n3lH2wcu0qhcdaOpQwyoarkgLVxC/wZ5q7h9gHtxICrpcaSUfygqZGOe" crossorigin="anonymous"></script>
 </head>
   <body>
-    <div>
-        <nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="mb-2">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
             <a class="navbar-brand" href="#">Motet</a>
             <span class="ml-auto">
-                <button is="google-cast-button" class="my-2 my-sm-0" style="height: 30px; width: 30px"></button>
+                <button is="google-cast-button" class="border-0 my-2 my-sm-0" style="height: 30px; width: 30px; background-color: transparent"></button>
             </span>
         </nav>
     </div>    
@@ -71,8 +71,53 @@
     class Motet extends React.Component {
         constructor(props) {
             super(props);
+            this.state = {info: { msg: null, type: null }};
+            this.handleInfoChange = this.handleInfoChange.bind(this);
+        }
+
+        handleInfoChange(info) {
+            this.setState({info: info});
+        }
+
+        render() {
+            return (
+                <div>
+                <InfoBanner info={this.state.info}/>
+                <Songs onInfoChange={this.handleInfoChange}/>
+                </div>
+            );
+        }
+    }
+
+    class InfoBanner extends React.Component {
+        constructor(props) {
+            super(props);
+        }
+
+        render() {
+
+            if(!this.props.info.msg) return (<div></div>);
+
+            if(this.props.info.type == "error") {
+                return (
+                    <div className="alert alert-danger" role="alert">
+                        {this.props.info.msg}
+                    </div>
+                );
+            } else if(this.props.info.type == "info") {
+                return (
+                    <div className="alert alert-primary" role="alert">
+                        {this.props.info.msg}
+                    </div>
+                );
+            }
+        }
+    }
+
+    class Songs extends React.Component {
+        constructor(props) {
+            super(props);
             this.state = {
-                error: null,
                 isLoaded: false,
                 items: [],
                 albums: [],
@@ -84,10 +129,26 @@
 
             this.playMusic = this.playMusic.bind(this);
             this.addSongToQueue = this.addSongToQueue.bind(this);
+
+            this.playQueue_OnClick = this.playQueue_OnClick.bind(this);
             
             this.getArtists_OnClick = this.getArtists_OnClick.bind(this);
             this.getArtistAlbums_OnClick = this.getArtistAlbums_OnClick.bind(this);
             this.getArtistAlbumSongs_OnClick = this.getArtistAlbumSongs_OnClick.bind(this);
+        }
+
+        playQueue_OnClick(item, e) {
+            if(!connected) {
+                this.props.onInfoChange({msg: "Not connected", type: "error"});
+            } else if(this.state.songs) {
+                var queue = this.getPlayQueue(item);
+
+                var queueItems = [];
+                queue.forEach(song => {
+                    queueItems.push(new chrome.cast.media.QueueItem(this.getSongAsMediaInfo(song)));
+                });
+                this.playQueue(queueItems);
+            }            
         }
 
         getArtists_OnClick(e) {
@@ -103,12 +164,16 @@
                 this.getArtistAlbumSongs(this.state.artist, album);
         }
 
+        getPlayQueue(song) {            
+            return this.state.songs.slice(this.state.songs.indexOf(song));
+        }
+
         getArtists() {
             fetch(location.origin + '/artists')
                 .then(res => res.json())
                 .then(result => {
+                    this.props.onInfoChange({msg: null, type: null});
                     this.setState({
-                        error: null,
                         isLoaded: true,
                         artists: result,
                         albums: null,
@@ -116,8 +181,8 @@
                     });
                 },
                 error => {
+                    this.props.onInfoChange({msg: error, type: "error"});
                     this.setState({
-                        error: error,
                         isLoaded: false
                     });
                 })
@@ -127,9 +192,8 @@
             fetch(location.origin + '/artist/' + artist)
                 .then(res => res.json())
                 .then(result => {
-                    console.log(result);
+                    this.props.onInfoChange({msg: null, type: null});
                     this.setState({
-                        error: null,
                         isLoaded: true,
                         artists: null,
                         albums: result,
@@ -138,10 +202,9 @@
                     });
                 },
                 error => {
+                    this.props.onInfoChange({msg: error, type: "error"});
                     this.setState({
-                        error: error,
-                        isLoaded: false,
-                        artist: null
+                        isLoaded: false
                     });
                 })
         }
@@ -150,8 +213,8 @@
             fetch(location.origin + '/artist/' + artist + '/album/' + album)
                 .then(res => res.json())
                 .then(result => {
+                    this.props.onInfoChange({msg: null, type: null});
                     this.setState({
-                        error: null,
                         isLoaded: true,
                         artists: null,
                         albums: null,
@@ -160,10 +223,9 @@
                     });
                 },
                 error => {
+                    this.props.onInfoChange({msg: error, type: "error"});
                     this.setState({
-                        error: error,
-                        isLoaded: false,
-                        album: album
+                        isLoaded: false
                     });
                 })
         }
@@ -172,15 +234,15 @@
             fetch(location.origin + '/albums')
                 .then(res => res.json())
                 .then(result => {
+                    this.props.onInfoChange({msg: null, type: null});
                     this.setState({
-                        error: null,
                         isLoaded: true,
                         albums: result
                     });
                 },
                 error => {
+                    this.props.onInfoChange({msg: error, type: "error"});
                     this.setState({
-                        error: error,
                         isLoaded: false
                     });
                 })
@@ -192,6 +254,16 @@
       
         componentWillUnmount() {
       
+        }
+
+        getSongAsMediaInfo(song) {
+            var currentMediaURL = location.origin + "/music/" + song.md5;
+            var contentType = this.getContentType(song.dataformat);
+            var mediaInfo = new chrome.cast.media.MediaInfo(currentMediaURL, contentType);
+
+            mediaInfo.metadata = this.getSongMetadata(song);
+
+            return mediaInfo;
         }
 
         getContentType(dataformat) {
@@ -218,14 +290,26 @@
             return meta;
         }
 
+        playQueue(queue) {
+            if(connected) {
+                var castSession = cast.framework.CastContext.getInstance().getCurrentSession().getSessionObj();
+                var request = new chrome.cast.media.QueueInsertItemsRequest(queue); 
+                castSession.queueLoad(request,
+                () => { this.props.onInfoChange({msg: null, type: null}); },
+                errorCode => {
+                    this.props.onInfoChange({msg: errorCode, type: "error"});
+                }); 
+            } else {
+                this.props.onInfoChange({msg: "Not Connected", type: "error"});
+            }
+        }
+
         playMusic(item, e) {
             console.log(item.md5);
             console.log(e);
 
             if(connected) {
-                console.log("Jag är kopplad");
                 var castSession = cast.framework.CastContext.getInstance().getCurrentSession();
-                console.log(castSession);
                 var currentMediaURL = location.origin + "/music/" + item.md5;
                 var contentType = this.getContentType(item.dataformat);
                 var mediaInfo = new chrome.cast.media.MediaInfo(currentMediaURL, contentType);
@@ -234,21 +318,18 @@
                 var request = new chrome.cast.media.LoadRequest(mediaInfo);
                 castSession.loadMedia(request).then(
                     () => { console.log('Load succeed'); },
-                    errorCode => { console.log('Error code: ' + errorCode); });
+                    errorCode => {
+                        this.props.onInfoChange({msg: errorCode, type: "error"});
+                    }); 
             } else {
-                console.log("Nej jag är inte kopplad")
+                this.props.onInfoChange({msg: "Not Connected", type: "error"});
             } 
         }
 
         addSongToQueue(item, e) {
-            console.log(item.md5);
-            console.log(e);
-
             if(connected) {
-                console.log("Jag är kopplad");
                 var castSession = cast.framework.CastContext.getInstance().getCurrentSession().getSessionObj();
 
-                console.log(castSession);
                 var currentMediaURL = location.origin + "/music/" + item.md5;
                 var contentType = this.getContentType(item.dataformat);
 
@@ -268,23 +349,23 @@
         }
 
         getSongList(items) {
-            return (<ul className="list-group list-group-flush">
+            return (<div className="list-group list-group-flush">
                     {items.map(item => (
-                      <li className="list-group-item">
-                          <p>
-                              {item.title}
-                              <button type="button" onClick={(e) => this.playMusic(item, e)} className='btn button-primary btn-sm ml-3' style={{backgroundColor: "transparent"}}>
-                                  <i className="fas fa-play"></i>
-                              </button>
-                              
-                              <button type="button" onClick={(e) => this.addSongToQueue(item, e)} className='btn button-primary btn-sm ml-3' style={{backgroundColor: "transparent"}}>
-                                  <i class="fas fa-plus"></i>
-                              </button>
-                          </p>
-                          <small>{item.artist} {item.album}</small>
-                      </li>
+                      <button type="button" onClick={(e) => this.playQueue_OnClick(item, e)} className="list-group-item list-group-item-action">
+                              {item.title}                          
+                      </button>
                     ))}
-                  </ul>);
+                  </div>);
+                  /*
+                  <button type="button" onClick={(e) => this.playMusic(item, e)} className='btn button-primary btn-sm ml-3' style={{backgroundColor: "transparent"}}>
+                        <i className="fas fa-play"></i>
+                    </button>
+                    
+                    <button type="button" onClick={(e) => this.addSongToQueue(item, e)} className='btn button-primary btn-sm ml-3' style={{backgroundColor: "transparent"}}>
+                        <i class="fas fa-plus"></i>
+                    </button>
+                    */
+                  //<small>{item.artist} {item.album}</small>
         }
 
         getAlbumsList(items) {
@@ -308,17 +389,15 @@
         }
 
         render() {
-            const { error, isLoaded, items, artists, albums, songs } = this.state;
-            if (error) {
-              return <div>Error: {error.message}</div>;
-            } else if (!isLoaded) {
-              return <div>Loading...</div>;
+            const { isLoaded, items, artists, albums, songs } = this.state;
+            if (!isLoaded) {
+              return <div><i class="fas fa-spinner fa-pulse"></i></div>;
             } else if (artists) {
                 return (
                     <div>
                     <nav aria-label="breadcrumb">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item active" aria-current="page">Artists</li>
+                        <ol className="breadcrumb">
+                            <li className="breadcrumb-item active" aria-current="page">Artists</li>
                         </ol>
                     </nav>
                     {this.getArtistsList(artists)}
