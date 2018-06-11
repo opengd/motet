@@ -9,19 +9,16 @@ const hasha = require('hasha');
 const express = require('express')
 const app = express()
 
-const lodashId = require('lodash-id');
 const low = require('lowdb');
 const FileSync = require('lowdb/adapters/FileSync');
  
 const adapter = new FileSync('db.json');
 const db = low(adapter);
 
+const adapterConfig = new FileSync('config.json');
+const config = low(adapterConfig);
+
 const internalIp = require('internal-ip');
-
-db._.mixin(lodashId);
-
-db.defaults({ music: [], status: {}, stats: {} })
-  .write()
 
 function extCheck(filepath) {
     var extname = path.extname(filepath);
@@ -42,13 +39,13 @@ function initStats() {
     .map('artist')
     .uniq()
     .size()
-    .value());
+    .value()).write();
 
     db.set('stats.albums', db.get('music')
-    .map('albums')
+    .map('album')
     .uniq()
     .size()
-    .value());
+    .value()).write();
 }
 
 function initStatus() {
@@ -56,44 +53,73 @@ function initStatus() {
 }
 
 function updateDatabase() {
+
+    var timestamp = Date.now();
+
     const excludeDirFilter = through2.obj(function (item, enc, next) {
         if (!item.stats.isDirectory() && extCheck(item.path)) this.push(item);
         next();
       });
-    db.set('status.db_update', true).write();
-    klaw('C:\\Users\\ejevi\\Music')
-    .pipe(excludeDirFilter)
-    .on('data', item => {
-        mm.parseFile(item.path, {skipCovers: true, duration: true})
-            .then(meta => {                
-                // Get the md5 for the meta information
-                var md5 = getMetaHash(meta);
-                
-                // Get the post if it exist in the database already
-                var post = isFileInDb(md5);
-                
-                if(!post) {
-                    // Add the new file and meta to the database.
-                    addMusicFileToDb(item, meta, md5);
 
-                    db.set('stats.songs', db.get('stats.songs')
-                    .value() + 1).write();
+    db.set('status.db_update', true).write();
+
+    var nmbMusicPaths = config.get('music_paths').size().value();
+
+    config.get('music_paths').value().forEach(searchpath => {
+        console.log("Searching: " + searchpath);
+        klaw(searchpath)
+        .pipe(excludeDirFilter)
+        .on('data', item => {
+            mm.parseFile(item.path, {skipCovers: true, duration: true})
+                .then(meta => {                
+                    // Get the md5 for the meta information
+                    var md5 = getMetaHash(meta);
                     
-                    console.log("OK: " + item.path)
-                } else {
-                    // If the filepath is not equal to the post already in database
-                    // then update the filepath to use the new one.
-                    if(post.file != item.path) updateFilePath(md5, item.path);
-                }
+                    // Get the post if it exist in the database already
+                    var post = isFileInDb(md5);
+                    
+                    if(!post) {
+                        // Add the new file and meta to the database.
+                        addMusicFileToDb(item, meta, md5, timestamp);                    
+                        console.log("OK: " + item.path)
+                    } else {
+                        // If the filepath is not equal to the post already in database
+                        // then update the filepath to use the new one.
+                        if(post.file != item.path) updateFilePath(md5, item.path);
+
+                        updateDbTimestamp(md5, timestamp);
+                    }
+                })
+                .catch(error => {
+                    console.log("ERROR: " + item.path);
+
+                    // Get the md5 for the meta information
+                    var md5 = hasha(item.path, {algorithm: 'md5'});
+
+                    // Get the post if it exist in the database already
+                    var post = isFileInDb(md5);
+
+                    if(!post) {
+                        console.log("ADD as Unknown: " + item.path);
+
+                        // Add as unknown Artist and Album to the database
+                        addUnknowFileToDb(item.path, md5, timestamp);
+                    }
+                })        
             })
-            .catch(error => {
-                console.log("ERROR: " + item.path);
-                var hash = hasha(item.path, {algorithm: 'md5'});
-                console.log("ADD as Unknown: " + item.path);
-                addUnknowFileToDb(item.path, hash);
-            })        
-        })
-    .on('end', () => {db.set('status.db_update', false).write();} );
+        .on('end', () => {
+            
+            nmbMusicPaths--;
+            
+            if(nmbMusicPaths == 0) {
+                db.set('status.db_update', false).write(); 
+                
+                initStats();
+                
+                console.log("Database update finish.");
+            }
+        });
+    });
 }
 
 app.get('/', (req, res) => { 
@@ -188,17 +214,6 @@ app.get('/queue/:md5', (req, res) => {
     }    
 });
 
-console.log("Init stats.");
-initStats();
-console.log("Init status.");
-initStatus();
-
-var sssd = app.listen(3000, () => { 
-    internalIp.v4().then(ip => {
-        console.log('Please open http://' + ip + ":3000 in Google Chrome.");
-    });   
-});
-
 function getMetaHash(meta) {
     var m = meta.common.artist ? meta.common.artist : meta.common.artists[0]; 
     m += meta.common.title +
@@ -222,7 +237,7 @@ function isFileInDb(md5) {
     return post ? post : false;
 }
 
-function addMusicFileToDb(item, meta, md5) {
+function addMusicFileToDb(item, meta, md5, timestamp) {
     db.get('music')
     .push({
         "md5": md5,  
@@ -235,12 +250,13 @@ function addMusicFileToDb(item, meta, md5) {
         "bitrate": meta.format.bitrate,
         "sampleRate": meta.format.sampleRate,
         "numberOfChannels": meta.format.numberOfChannels,
-        "duration": meta.format.duration
+        "duration": meta.format.duration,
+        "db_timestamp": timestamp
     })
     .write();
 }
 
-function addUnknowFileToDb(filepath, md5) {
+function addUnknowFileToDb(filepath, md5, timestamp) {
 
     var tracks = db.get('music')
     .filter({artist: "Unknown", album: "Unknown"})
@@ -261,9 +277,17 @@ function addUnknowFileToDb(filepath, md5) {
         "bitrate": 0,
         "sampleRate": 0,
         "numberOfChannels": 0,
-        "duration": 0
+        "duration": 0,
+        "db_timestamp": timestamp
     })
     .write();
+}
+
+function updateDbTimestamp(md5, timestamp) {
+    db.get('music')
+        .find({ md5: md5 })
+        .assign({ db_timestamp: timestamp})
+        .write();
 }
 
 function updateFilePath(md5, filepath) {
@@ -280,3 +304,24 @@ function getStatus() {
 function getStats() {
     return db.get('stats').value();
 }
+
+db.defaults({ music: [], status: {}, stats: {} })
+    .write();
+
+config.defaults({port: 3000, music_paths: [], name: "Motet"})
+    .write();
+
+console.log("Init stats.");
+initStats();
+console.log(getStats());
+console.log("Init status.");
+initStatus();
+console.log(getStatus());
+console.log("Config:");
+console.log(config.value());
+
+app.listen(config.get('port').value(), () => { 
+    internalIp.v4().then(ip => {
+        console.log('Please open http://' + ip + ":3000 in Google Chrome.");
+    });   
+});
