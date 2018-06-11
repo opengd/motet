@@ -37,18 +37,8 @@
                 </div>
             </div>
     </div>
-    <!--<div class="mb-2">
-        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-            <a class="navbar-brand" href="#">Motet</a>
-            
-            <div id="status"></div>
-            <span class="ml-auto">
-                <button is="google-cast-button" class="border-0 my-2 my-sm-0" style="height: 30px; width: 30px; background-color: transparent"></button>
-            </span>
-        </nav>
-    </div> -->   
-    <div id="root" class="container-fluid pb-4">
 
+    <div id="root" class="container-fluid pb-4">
     </div>
     
     <script>
@@ -371,11 +361,36 @@
             } 
         }
 
+        formatDuration(duration) {
+ 
+            var secs = Math.round(duration);
+            var hours = Math.floor(secs / (60 * 60));
+        
+            var divisor_for_minutes = secs % (60 * 60);
+            var minutes = Math.floor(divisor_for_minutes / 60);
+        
+            var divisor_for_seconds = divisor_for_minutes % 60;
+            var seconds = Math.ceil(divisor_for_seconds);
+
+            var f = "";
+            console.log(hours);
+            if(hours > 0) f = hours + ":";
+            
+            if(minutes < 1) f = f + "0:";
+            else f = f + minutes + ":";
+
+            if(seconds < 10) f = f + "0" + seconds;
+            else f = f + seconds;
+
+            return f;
+        }
+
         getSongList(items) {
+
             return (<div className="list-group list-group-flush">
                     {items.map(item => (
                       <button type="button" onClick={(e) => this.playQueue_OnClick(item, e)} className="list-group-item list-group-item-action">
-                              {item.title}                          
+                              {item.title} <span className="text-muted">{this.formatDuration(item.duration)}</span>                         
                       </button>
                     ))}
                   </div>);
