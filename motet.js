@@ -64,6 +64,9 @@ function updateDatabase() {
     db.set('status.db_update', true).write();
 
     var nmbMusicPaths = config.get('music_paths').size().value();
+    
+    // Clear the music database, a quick fix to remove any loose entries on update.
+    clearMusicDatabase();
 
     config.get('music_paths').value().forEach(searchpath => {
         console.log("Searching: " + searchpath);
@@ -72,39 +75,41 @@ function updateDatabase() {
         .on('data', item => {
             mm.parseFile(item.path, {skipCovers: true, duration: true})
                 .then(meta => {                
-                    // Get the md5 for the meta information
-                    var md5 = getMetaHash(meta);
+                    // Get the md5 for the meta information.
+                    var md5 = getMetaHash(meta, item.path);
                     
-                    // Get the post if it exist in the database already
-                    var post = isFileInDb(md5);
+                    // Get the post if it exist in the database already.
+                    //var post = isFileInDb(md5);
                     
-                    if(!post) {
+                    //if(!post) {
                         // Add the new file and meta to the database.
                         addMusicFileToDb(item, meta, md5, timestamp);                    
-                        console.log("OK: " + item.path)
-                    } else {
+                        //console.log("OK: " + item.path)
+                    //} else {
                         // If the filepath is not equal to the post already in database
                         // then update the filepath to use the new one.
-                        if(post.file != item.path) updateFilePath(md5, item.path);
+                        //if(post.file != item.path) updateFilePath(md5, item.path);
 
-                        updateDbTimestamp(md5, timestamp);
-                    }
+                        //updateDbTimestamp(md5, timestamp);
+                    //}
                 })
                 .catch(error => {
-                    console.log("ERROR: " + item.path);
+                    //console.log("ERROR: " + item.path);
 
-                    // Get the md5 for the meta information
+                    // Get the md5 for the meta information.
                     var md5 = hasha(item.path, {algorithm: 'md5'});
 
-                    // Get the post if it exist in the database already
-                    var post = isFileInDb(md5);
+                    // Get the post if it exist in the database already.
+                    //var post = isFileInDb(md5);
 
-                    if(!post) {
-                        console.log("ADD as Unknown: " + item.path);
+                    //if(!post) {
+                        //console.log("ADD as Unknown: " + item.path);
 
-                        // Add as unknown Artist and Album to the database
+                        // Add as unknown Artist and Album to the database.
                         addUnknowFileToDb(item.path, md5, timestamp);
-                    }
+                    //} else {
+                        //updateDbTimestamp(md5, timestamp);
+                    //}
                 })        
             })
         .on('end', () => {
@@ -112,11 +117,21 @@ function updateDatabase() {
             nmbMusicPaths--;
             
             if(nmbMusicPaths == 0) {
-                db.set('status.db_update', false).write(); 
                 
+                //var lastTimestamp = db.get('status.db_update_timestamp').value();
+
+                //if(lastTimestamp) {
+                //    db.get('music').remove({db_timestamp: lastTimestamp}).write();
+                //}
+                
+                db.set('status.db_update', false).write();
+                db.set('status.db_update_timestamp', timestamp).write(); 
+                
+                // Refresh the stats database to reflect the update.
                 initStats();
+                console.log(getStats());
+                console.log("Database update finish in " + (Date.now() - timestamp)  + "Ms.");
                 
-                console.log("Database update finish.");
             }
         });
     });
@@ -214,7 +229,7 @@ app.get('/queue/:md5', (req, res) => {
     }    
 });
 
-function getMetaHash(meta) {
+function getMetaHash(meta, filepath) {
     var m = meta.common.artist ? meta.common.artist : meta.common.artists[0]; 
     m += meta.common.title +
         meta.common.track.no +
@@ -223,7 +238,8 @@ function getMetaHash(meta) {
         meta.format.bitrate + 
         meta.format.sampleRate +
         meta.format.numberOfChannels +
-        meta.format.duration;
+        meta.format.duration + 
+        filepath;
 
     return hasha(m, {algorithm: 'md5'});
 }
@@ -303,6 +319,10 @@ function getStatus() {
 
 function getStats() {
     return db.get('stats').value();
+}
+
+function clearMusicDatabase() {
+    return db.set('music', []).write();
 }
 
 db.defaults({ music: [], status: {}, stats: {} })
