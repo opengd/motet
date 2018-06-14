@@ -11,12 +11,21 @@ const app = express()
 
 const low = require('lowdb');
 const FileSync = require('lowdb/adapters/FileSync');
- 
-const adapter = new FileSync('db.json');
-const db = low(adapter);
 
-const adapterConfig = new FileSync('config.json');
+var argv = require('minimist')(process.argv.slice(2));
+
+var cfg_name = "config.json";
+
+if(argv.config) cfg_name = argv.config;
+
+const adapterConfig = new FileSync(cfg_name);
 var config = low(adapterConfig);
+
+config.defaults({port: 3000, music_paths: [], name: "Motet", db_name: "db.json"})
+    .write();
+
+const adapter = new FileSync(config.get("db_name").value());
+const db = low(adapter);
 
 const internalIp = require('internal-ip');
 
@@ -331,9 +340,6 @@ function clearMusicDatabase() {
 }
 
 db.defaults({ music: [], status: {}, stats: {} })
-    .write();
-
-config.defaults({port: 3000, music_paths: [], name: "Motet"})
     .write();
 
 console.log("Init stats.");
