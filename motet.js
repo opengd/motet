@@ -16,7 +16,7 @@ const adapter = new FileSync('db.json');
 const db = low(adapter);
 
 const adapterConfig = new FileSync('config.json');
-const config = low(adapterConfig);
+var config = low(adapterConfig);
 
 const internalIp = require('internal-ip');
 
@@ -58,8 +58,12 @@ function updateDatabase() {
 
     db.set('status.db_update', true).write();
 
+    config = low(adapterConfig);
+
     var nmbMusicPaths = config.get('music_paths').size().value();
-    
+    //console.log('nmbMusicPaths: ' + nmbMusicPaths);
+    //console.log("config.get('music_paths').value()" + config.get('music_paths').value());
+
     // Clear the music database, a quick fix to remove any loose entries on update.
     clearMusicDatabase();
 

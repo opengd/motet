@@ -263,10 +263,23 @@
 
         componentDidMount() {
             this.getArtists();
+
+            //console.log(window.location.hash.substr(1));
+        
         }
-      
+        
+        componentDidUpdate() {
+            //console.log(window.location.hash.substr(1));
+
+            var id = window.location.hash.substr(1);
+            
+            if(id) {
+                const element = document.getElementById(id);
+                if (element) element.scrollIntoView();
+            }
+        }
+
         componentWillUnmount() {
-      
         }
 
         getSongAsMediaInfo(song) {
@@ -417,10 +430,11 @@
         }
 
         getArtistsList(items) {
+            var counter = 0;
             return (<div className="list-group list-group-flush">
                     {items.map(artist => (
-                      <a href="#" onClick={(e) => this.getArtistAlbums_OnClick(artist, e)} className="list-group-item list-group-item-action">
-                          {artist}
+                      <a href={"#" + (counter++)} onClick={(e) => this.getArtistAlbums_OnClick(artist, e)} className="list-group-item list-group-item-action">
+                      <div id={counter}>{artist}</div>
                       </a>
                     ))}
                     </div>);
@@ -442,11 +456,13 @@
                     </div>
               );
             } else if (albums) {
+                //console.log(window.location.hash.substr(1));
+                var h = window.location.hash.substr(1);
                 return (
                     <div>
                     <nav aria-label="breadcrumb">
                         <ol className="breadcrumb">
-                            <li className="breadcrumb-item"><a href="#" onClick={(e) => this.getArtists_OnClick(e)}>Artists</a></li>
+                            <li className="breadcrumb-item"><a href={"#" + h} onClick={(e) => this.getArtists_OnClick(e)}>Artists</a></li>
                             <li className="breadcrumb-item active" aria-current="page">{this.state.artist}</li>
                         </ol>
                     </nav>
@@ -469,7 +485,6 @@
                     </div>
                 );
             }
-
         }
     }
 
