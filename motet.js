@@ -56,11 +56,6 @@ function updateDatabase() {
 
     var timestamp = Date.now();
 
-    const excludeDirFilter = through2.obj(function (item, enc, next) {
-        if (!item.stats.isDirectory() && extCheck(item.path)) this.push(item);
-        next();
-      });
-
     db.set('status.db_update', true).write();
 
     var nmbMusicPaths = config.get('music_paths').size().value();
@@ -69,6 +64,12 @@ function updateDatabase() {
     clearMusicDatabase();
 
     config.get('music_paths').value().forEach(searchpath => {
+        const excludeDirFilter = through2.obj(function (item, enc, next) {
+            if (!item.stats.isDirectory() && extCheck(item.path)) this.push(item);
+            //else console.log(item.path);
+            next();
+          });
+
         console.log("Searching: " + searchpath);
         klaw(searchpath)
         .pipe(excludeDirFilter)
