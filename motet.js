@@ -6,28 +6,14 @@ const util = require('util');
 
 const hasha = require('hasha');
 
-const express = require('express')
-const app = express()
+const express = require('express');
+const app = express();
+var ip = require('ip');
 
 const low = require('lowdb');
 const FileSync = require('lowdb/adapters/FileSync');
 
 var argv = require('minimist')(process.argv.slice(2));
-
-var cfg_name = "config.json";
-
-if(argv.config) cfg_name = argv.config;
-
-const adapterConfig = new FileSync(cfg_name);
-var config = low(adapterConfig);
-
-config.defaults({port: 3000, music_paths: [], name: "Motet", db_name: "db.json"})
-    .write();
-
-const adapter = new FileSync(config.get("db_name").value());
-const db = low(adapter);
-
-const internalIp = require('internal-ip');
 
 function extCheck(filepath) {
     var extname = path.extname(filepath);
@@ -339,6 +325,19 @@ function clearMusicDatabase() {
     return db.set('music', []).write();
 }
 
+var cfg_name = "config.json";
+
+if(argv.config) cfg_name = argv.config;
+
+const adapterConfig = new FileSync(cfg_name);
+var config = low(adapterConfig);
+
+config.defaults({port: 3000, address: "", music_paths: [], name: "Motet", db_name: "db.json"})
+    .write();
+
+const adapter = new FileSync(config.get("db_name").value());
+const db = low(adapter);
+
 db.defaults({ music: [], status: {}, stats: {} })
     .write();
 
@@ -351,8 +350,12 @@ console.log(getStatus());
 console.log("Config:");
 console.log(config.value());
 
-app.listen(config.get('port').value(), () => { 
-    internalIp.v4().then(ip => {
-        console.log('Please open http://' + ip + ":3000 in Google Chrome.");
-    });   
-});
+if(config.get('address').value() && config.get('address').value().length > 0) {
+    app.listen(config.get('port').value(), config.get('address').value(), () => { 
+        console.log('Please open http://' + config.get('address').value() + ":3000 in Google Chrome.");
+    });
+} else {
+    app.listen(config.get('port').value(), () => { 
+        console.log('Please open http://' + ip.address() + ":3000 or http://127.0.0.1:3000 in Google Chrome.");
+    });
+}
