@@ -262,10 +262,7 @@
         }
 
         componentDidMount() {
-            this.getArtists();
-
-            //console.log(window.location.hash.substr(1));
-        
+            this.getArtists();        
         }
         
         componentDidUpdate() {
@@ -399,14 +396,13 @@
         }
 
         getSongList(items) {
-
             return (<div className="list-group list-group-flush">
                     {items.map(item => (
-                      <button type="button" onClick={(e) => this.playQueue_OnClick(item, e)} className="list-group-item list-group-item-action">
-                              {item.title} <span className="text-muted">{this.formatDuration(item.duration)}</span>                         
-                      </button>
+                        <button type="button" onClick={(e) => this.playQueue_OnClick(item, e)} className="list-group-item list-group-item-action">
+                            {item.title} <span className="text-muted">{this.formatDuration(item.duration)}</span>                         
+                        </button>
                     ))}
-                  </div>);
+                </div>);
                   /*
                   <button type="button" onClick={(e) => this.playMusic(item, e)} className='btn button-primary btn-sm ml-3' style={{backgroundColor: "transparent"}}>
                         <i className="fas fa-play"></i>
@@ -422,22 +418,21 @@
         getAlbumsList(items) {
             return (<div className="list-group list-group-flush">
                     {items.map(album => (
-                      <a href="#" onClick={(e) => this.getArtistAlbumSongs_OnClick(album, e)} className="list-group-item list-group-item-action">
-                          {album}
-                      </a>
+                        <a id={encodeURIComponent(album)} href="#" onClick={(e) => this.getArtistAlbumSongs_OnClick(album, e)} className="list-group-item list-group-item-action">
+                            {album}
+                        </a>
                     ))}
                 </div>);
         }
 
         getArtistsList(items) {
-            var counter = 0;
             return (<div className="list-group list-group-flush">
                     {items.map(artist => (
-                      <a href={"#" + (counter++)} onClick={(e) => this.getArtistAlbums_OnClick(artist, e)} className="list-group-item list-group-item-action">
-                      <div id={counter}>{artist}</div>
-                      </a>
+                        <a id={encodeURIComponent(artist)} href="#" onClick={(e) => this.getArtistAlbums_OnClick(artist, e)} className="list-group-item list-group-item-action">
+                            {artist}
+                        </a>
                     ))}
-                    </div>);
+                </div>);
         }
 
         render() {
@@ -456,17 +451,14 @@
                     </div>
               );
             } else if (albums) {
-                //console.log(window.location.hash.substr(1));
-                var h = window.location.hash.substr(1);
                 return (
                     <div>
                     <nav aria-label="breadcrumb">
                         <ol className="breadcrumb">
-                            <li className="breadcrumb-item"><a href={"#" + h} onClick={(e) => this.getArtists_OnClick(e)}>Artists</a></li>
+                            <li className="breadcrumb-item"><a href={"#" + encodeURIComponent(this.state.artist)} onClick={(e) => this.getArtists_OnClick(e)}>Artists</a></li>
                             <li className="breadcrumb-item active" aria-current="page">{this.state.artist}</li>
                         </ol>
-                    </nav>
-                    
+                    </nav>          
                         {this.getAlbumsList(albums)}
                     </div>
                 );
@@ -475,8 +467,8 @@
                     <div>
                     <nav aria-label="breadcrumb">
                         <ol className="breadcrumb">
-                            <li className="breadcrumb-item"><a href="#" onClick={(e) => this.getArtists_OnClick(e)}>Artists</a></li>
-                            <li className="breadcrumb-item"><a href="#" onClick={(e) => this.getArtistAlbums_OnClick(this.state.artist, e)}>{this.state.artist}</a></li>
+                            <li className="breadcrumb-item"><a href={"#" + encodeURIComponent(this.state.artist)} onClick={(e) => this.getArtists_OnClick(e)}>Artists</a></li>
+                            <li className="breadcrumb-item"><a href={"#" + encodeURIComponent(this.state.album)} onClick={(e) => this.getArtistAlbums_OnClick(this.state.artist, e)}>{this.state.artist}</a></li>
                             <li className="breadcrumb-item active" aria-current="page">{this.state.album}</li>
                         </ol>
                     </nav>

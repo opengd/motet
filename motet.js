@@ -318,10 +318,17 @@ console.log(config.value());
 
 if(config.get('address').value() && config.get('address').value().length > 0) {
     app.listen(config.get('port').value(), config.get('address').value(), () => { 
-        console.log('Please open http://' + config.get('address').value() + ":3000 in Google Chrome.");
+        console.log('Please open http://' + 
+            config.get('address').value() + ":" + 
+            config.get('port').value() + 
+            " in Google Chrome.");
     });
 } else {
     app.listen(config.get('port').value(), () => { 
-        console.log('Please open http://' + ip.address() + ":3000 or http://127.0.0.1:3000 in Google Chrome.");
+        console.log('Please open http://' + 
+            ip.address() +
+            ":" + config.get('port').value() + 
+            " or http://127.0.0.1:" + config.get('port').value() + 
+            " in Google Chrome.");
     });
 }
