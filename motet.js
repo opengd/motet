@@ -316,6 +316,7 @@ console.log(getStatus());
 console.log("Config:");
 console.log(config.value());
 
+try {
 if(config.get('address').value() && config.get('address').value().length > 0) {
     app.listen(config.get('port').value(), config.get('address').value(), () => { 
         console.log('Please open http://' + 
@@ -328,7 +329,8 @@ if(config.get('address').value() && config.get('address').value().length > 0) {
         console.log('Please open http://' + 
             ip.address() +
             ":" + config.get('port').value() + 
-            " or http://127.0.0.1:" + config.get('port').value() + 
             " in Google Chrome.");
     });
+} } catch(ex) {
+    console.log("Could not start server, please check address and if port " + config.get('port').value() + " is not in use.")
 }
