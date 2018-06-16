@@ -316,21 +316,30 @@ console.log(getStatus());
 console.log("Config:");
 console.log(config.value());
 
-try {
 if(config.get('address').value() && config.get('address').value().length > 0) {
-    app.listen(config.get('port').value(), config.get('address').value(), () => { 
+    app.listen(config.get('port').value(), config.get('address').value(), (e) => { 
         console.log('Please open http://' + 
             config.get('address').value() + ":" + 
             config.get('port').value() + 
             " in Google Chrome.");
+    }).on('error', (e) => {
+        if(e.code == 'EADDRINUSE') {
+            console.log("Error: Could start server on port " + config.get('port').value() + ", please check if the port is already in use.")
+        } else { 
+            console.log(e);
+        }
     });
 } else {
-    app.listen(config.get('port').value(), () => { 
+    app.listen(config.get('port').value(), (e) => { 
         console.log('Please open http://' + 
             ip.address() +
             ":" + config.get('port').value() + 
             " in Google Chrome.");
+    }).on('error', (e) => {
+        if(e.code == 'EADDRINUSE') {
+            console.log("Error: Could start server on port " + config.get('port').value() + ", please check if the port is already in use.")
+        } else { 
+            console.log(e);
+        }
     });
-} } catch(ex) {
-    console.log("Could not start server, please check address and if port " + config.get('port').value() + " is not in use.")
-}
+} 
