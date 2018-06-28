@@ -55,12 +55,16 @@ function updateDatabase() {
 
     config = low(adapterConfig);
 
-    var nmbMusicPaths = config.get('music_paths').size().value();
+    paths = config.get('music_paths').value();
+    keys = Object.keys(paths);
+
+    var nmbMusicPaths = keys.length;
 
     // Clear the music database, a quick fix to remove any loose entries on update.
     clearMusicDatabase();
 
-    config.get('music_paths').value().forEach(searchpath => {
+    keys.forEach(key => {
+        searchpath = paths[key];
         const excludeDirFilter = through2.obj(function (item, enc, next) {
             if (!item.stats.isDirectory() && extCheck(item.path)) this.push(item);
             next();
@@ -70,20 +74,22 @@ function updateDatabase() {
         klaw(searchpath)
         .pipe(excludeDirFilter)
         .on('data', item => {
+            prefix_name = key;
+            prefix_path = searchpath;
             mm.parseFile(item.path, {skipCovers: true, duration: true})
                 .then(meta => {                
                     // Get the md5 for the meta information.
                     var md5 = getMetaHash(meta, item.path);
 
                     // Add the new file and meta to the database.
-                    addMusicFileToDb(item, meta, md5, timestamp);                    
+                    addMusicFileToDb(item, meta, md5, timestamp, prefix_name, prefix_path);                    
                 })
                 .catch(error => {
                     // Get the md5 for the meta information.
                     var md5 = hasha(item.path, {algorithm: 'md5'});
 
                     // Add as unknown Artist and Album to the database.
-                    addUnknowFileToDb(item.path, md5, timestamp);
+                    addUnknowFileToDb(item.path, md5, timestamp, prefix_name, prefix_path);
                 })        
             })
         .on('end', () => {
@@ -171,7 +177,10 @@ app.get('/albums', (req, res) => {
 app.get('/music/:md5', (req, res) => { 
     var post = isFileInDb(req.params.md5);
     if(post) {
-        res.sendFile(post.path);
+        prefix = config.get('music_paths').value()[post.prefix];
+        console.log("PREFIX: " + prefix);
+        console.log(path.join(prefix, post.path));
+        res.sendFile(path.join(prefix, post.path));
     } else {
         res.sendStatus(404);
     }    
@@ -219,11 +228,12 @@ function isFileInDb(md5) {
     return post ? post : false;
 }
 
-function addMusicFileToDb(item, meta, md5, timestamp) {
+function addMusicFileToDb(item, meta, md5, timestamp, prefix_name, prefix_path) {
     db.get('music')
         .push({
-            "md5": md5,  
-            "path": item.path, 
+            "md5": md5,
+            "prefix": prefix_name,
+            "path": item.path.replace(prefix_path, ""), 
             "artist": meta.common.artist ? meta.common.artist : meta.common.artists[0],
             "title": meta.common.title,
             "track": meta.common.track.no,
@@ -238,7 +248,7 @@ function addMusicFileToDb(item, meta, md5, timestamp) {
         .write();
 }
 
-function addUnknowFileToDb(filepath, md5, timestamp) {
+function addUnknowFileToDb(filepath, md5, timestamp, prefix_name, prefix_path) {
 
     var tracks = db.get('music')
         .filter({artist: "Unknown", album: "Unknown"})
@@ -249,10 +259,11 @@ function addUnknowFileToDb(filepath, md5, timestamp) {
 
     db.get('music')
         .push({
-            "md5": md5,  
-            "path": filepath, 
+            "md5": md5,
+            "prefix": prefix_name,
+            "path": filepath.replace(prefix_path, ""),   
             "artist": "Unknown",
-            "title": filepath,
+            "title": path.basename(filepath),
             "track": tracks,
             "album": "Unknown",
             "dataformat": dataformat,
@@ -315,6 +326,14 @@ initStatus();
 console.log(getStatus());
 console.log("Config:");
 console.log(config.value());
+
+paths = config.get('music_paths').value();
+
+console.log(paths + Object.keys(paths).length);
+
+Object.keys(paths).forEach(key => {
+    console.log(key  + ":" + paths[key]);
+});
 
 if(config.get('address').value() && config.get('address').value().length > 0) {
     app.listen(config.get('port').value(), config.get('address').value(), (e) => { 
