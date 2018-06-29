@@ -75,7 +75,7 @@ function updateDatabase() {
         .pipe(excludeDirFilter)
         .on('data', item => {
             prefix_name = key;
-            prefix_path = searchpath;
+            prefix_path = paths[prefix_name];
             mm.parseFile(item.path, {skipCovers: true, duration: true})
                 .then(meta => {                
                     // Get the md5 for the meta information.
@@ -85,6 +85,7 @@ function updateDatabase() {
                     addMusicFileToDb(item, meta, md5, timestamp, prefix_name, prefix_path);                    
                 })
                 .catch(error => {
+                    console.log(error);
                     // Get the md5 for the meta information.
                     var md5 = hasha(item.path, {algorithm: 'md5'});
 
@@ -178,9 +179,13 @@ app.get('/music/:md5', (req, res) => {
     var post = isFileInDb(req.params.md5);
     if(post) {
         prefix = config.get('music_paths').value()[post.prefix];
+        filepath = post.path;
+        if(path.sep == "/") {
+            filepath = path.normalize(filepath).replace(/\\/gi, "/");
+        }
         console.log("PREFIX: " + prefix);
-        console.log(path.join(prefix, post.path));
-        res.sendFile(path.join(prefix, post.path));
+        console.log(path.normalize(path.join(prefix, filepath)));
+        res.sendFile(path.normalize(path.join(prefix, filepath)));
     } else {
         res.sendStatus(404);
     }    
