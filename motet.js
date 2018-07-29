@@ -98,13 +98,16 @@ function updateDatabase() {
             nmbMusicPaths--;
             
             if(nmbMusicPaths == 0) {               
-                db.set('status.db_update', false).write();
-                db.set('status.db_update_timestamp', timestamp).write(); 
-                
                 // Refresh the stats database to reflect the update.
-                initStats();
-                console.log(getStats());
-                console.log("Database update finish in " + (Date.now() - timestamp)  + "Ms.");              
+                // Wait a couple of seconds to be sure all files have been processed.
+                setTimeout(() => {
+                    db.set('status.db_update', false).write();
+                    db.set('status.db_update_timestamp', timestamp).write(); 
+                    initStats();
+                    console.log(getStats());
+                    console.log("Database update finish in " + (Date.now() - timestamp)  + "Ms."); 
+                }, 2000);
+             
             }
         });
     });
@@ -119,6 +122,10 @@ app.get('/', (req, res) => {
 
 app.get('/status', (req, res) => { 
     res.json(getStatus());
+});
+
+app.get('/stats', (req, res) => { 
+    res.json(getStats());
 });
 
 app.get('/config/database/update', (req, res) => {

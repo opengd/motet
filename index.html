@@ -15,7 +15,7 @@
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
     <script defer src="https://use.fontawesome.com/releases/v5.0.13/js/all.js" integrity="sha384-xymdQtn1n3lH2wcu0qhcdaOpQwyoarkgLVxC/wZ5q7h9gHtxICrpcaSUfygqZGOe" crossorigin="anonymous"></script>
 </head>
-  <body>
+  <body class="bg-dark">
 
     <div class="pos-f-t mb-2">
 
@@ -33,6 +33,7 @@
                 <div class="bg-dark p-4">
                     <h4 class="text-white">Update you music database</h4>
                     <span class="text-muted">This will add all new music files to database, and for you to play.</span>
+                    <div class="mt-2" id="stats"></div>
                     <div class="mt-2" id="status"></div>
                 </div>
             </div>
@@ -158,7 +159,9 @@
 
                 var queueItems = [];
                 queue.forEach(song => {
-                    queueItems.push(new chrome.cast.media.QueueItem(this.getSongAsMediaInfo(song)));
+                    var qi = new chrome.cast.media.QueueItem(this.getSongAsMediaInfo(song));
+                    qi.autoplay = true;
+                    queueItems.push(qi);
                 });
                 this.playQueue(queueItems);
             }            
@@ -315,10 +318,21 @@
 
         playQueue(queue) {
             if(connected) {
-                var castSession = cast.framework.CastContext.getInstance().getCurrentSession().getSessionObj();
-                var request = new chrome.cast.media.QueueInsertItemsRequest(queue); 
-                castSession.queueLoad(request,
-                () => { this.props.onInfoChange({msg: null, type: null}); },
+                //var castSession = cast.framework.CastContext.getInstance().getCurrentSession().getSessionObj();
+                var media = cast.framework.CastContext.getInstance().getCurrentSession().getMediaSession();
+                var request = new chrome.cast.media.QueueInsertItemsRequest(queue);
+                media.queueInsertItems(request,
+                () => { 
+                    this.props.onInfoChange({msg: null, type: null}); 
+                    //var castSession = cast.framework.CastContext.getInstance().getCurrentSession().getSessionObj();
+                    var request = new chrome.cast.media.GetStatusRequest();
+                    var media = cast.framework.CastContext.getInstance().getCurrentSession().getMediaSession();
+                    media.getStatus(request, () => {
+                        console.log("hep hep");
+                        var media = cast.framework.CastContext.getInstance().getCurrentSession().getMediaSession();
+                        console.log(media.items);
+                    }, (error) => {console.log(error);});
+                },
                 errorCode => {
                     this.props.onInfoChange({msg: errorCode, type: "error"});
                 }); 
@@ -398,9 +412,14 @@
         getSongList(items) {
             return (<div className="list-group list-group-flush">
                     {items.map((item, index) => (
-                        <button key={'song' + index} type="button" onClick={(e) => this.playQueue_OnClick(item, e)} className="list-group-item list-group-item-action">
+                        /*
+                        <button key={'song' + index} type="button" onClick={(e) => this.playQueue_OnClick(item, e)} className="list-group-item list-group-item-action list-group-item-dark">
                             {item.title} <span className="text-muted">{this.formatDuration(item.duration)}</span>                         
                         </button>
+                        */
+                        <a href="#" key={'song' + index} onClick={(e) => this.playQueue_OnClick(item, e)} className="list-group-item list-group-item-action">
+                            {item.title} <span className="text-muted">{this.formatDuration(item.duration)}</span>                         
+                        </a>
                     ))}
                 </div>);
                   /*
@@ -480,13 +499,15 @@
         }
     }
 
-    class Status extends React.Component {
+    class UpdateDatabaseComponent extends React.Component {
         constructor(props) {
             super(props);
 
             this.state = {db_update: false};
 
             this.updateDabase_OnClick = this.updateDabase_OnClick.bind(this);
+
+            this.getStats();
         }
 
         componentDidMount() {
@@ -495,6 +516,18 @@
         componentWillUnmount() {
             if(this.checkStatusTimer)
                 clearInterval(this.checkStatusTimer);
+        }
+
+        getStats() {
+            fetch(location.origin + '/stats')
+            .then(res => res.json())
+            .then(result => {
+                //console.log(result);
+                this.props.onStatsChange(result);
+            },
+            error => {
+                console.log(error);
+            });
         }
 
         getStatus() {
@@ -507,6 +540,8 @@
                 if(!result.db_update && this.checkStatusTimer) { 
                     clearInterval(this.checkStatusTimer);
                     this.checkStatusTimer = null;
+
+                    this.getStats();
                 }
             },
             error => {
@@ -539,15 +574,52 @@
         }
     }
 
-      ReactDOM.render(
+    class Stats extends React.Component {
+        constructor(props) {
+            super(props);
+        }
+
+        render() {
+            if(this.props.stats) {
+                return <div>
+                    <p className="text-white">Songs: {this.props.stats.songs}</p>
+                    <p className="text-white">Artists: {this.props.stats.artist}</p>
+                    <p className="text-white">Albums: {this.props.stats.albums}</p>
+                </div>
+            } else {
+                return <div></div>;
+            }
+        }
+    }
+
+    class DatabaseAndStats extends React.Component {
+        constructor(props) {
+            super(props);
+            this.state = {stats: null};
+            this.handleStatsChange = this.handleStatsChange.bind(this);
+        }
+
+        handleStatsChange(stats) {
+            this.setState({stats: stats});
+        }
+
+        render() {
+            return (<div>
+                <Stats stats={this.state.stats}/>
+                <UpdateDatabaseComponent onStatsChange={this.handleStatsChange} />
+            </div>);
+        }
+    }
+
+    ReactDOM.render(
         <Motet />,
         document.getElementById('root')
-      );
+    );
 
-      ReactDOM.render(
-        <Status />,
+    ReactDOM.render(
+        <DatabaseAndStats />,
         document.getElementById('status')
-      );
+    );
 
     </script>
     <!--
