@@ -9,9 +9,9 @@
     <script src="https://www.gstatic.com/cv/js/sender/v1/cast_sender.js"></script>
     <script src="https://www.gstatic.com/cast/sdk/libs/sender/1.0/cast_framework.js"></script>
     -->
-    <script src="https://unpkg.com/react@16/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/babel-standalone@6.15.0/babel.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react@16/umd/react.development.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@16/umd/react-dom.development.js"></script>
+    <script crossorigin src="https://unpkg.com/babel-standalone@6.15.0/babel.min.js"></script>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
     <script defer src="https://use.fontawesome.com/releases/v5.0.13/js/all.js" integrity="sha384-xymdQtn1n3lH2wcu0qhcdaOpQwyoarkgLVxC/wZ5q7h9gHtxICrpcaSUfygqZGOe" crossorigin="anonymous"></script>
 </head>
@@ -21,22 +21,21 @@
 
         <nav class="navbar navbar-dark bg-dark">
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarToggleExternalContent" aria-controls="navbarToggleExternalContent" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
+                <span class="navbar-toggler-icon"></span>
             </button>
             <a class="navbar-brand ml-4" href="#">Motet</a>
             
             <span class="ml-auto">
-                <button is="google-cast-button" class="border-0 my-2 my-sm-0" style="height: 30px; width: 30px; background-color: transparent"></button>
+                    <button is="google-cast-button" class="border-0 my-2 my-sm-0" style="height: 30px; width: 30px; background-color: transparent"></button>
             </span>
         </nav>
         <div class="collapse" id="navbarToggleExternalContent">
-                <div class="bg-dark p-4">
-                    <h4 class="text-white">Update you music database</h4>
-                    <span class="text-muted">This will add all new music files to database, and for you to play.</span>
-                    <div class="mt-2" id="stats"></div>
-                    <div class="mt-2" id="status"></div>
-                </div>
+            <div class="bg-dark p-4">
+                <h4 class="text-white">Update you music database</h4>
+                <span class="text-muted">This will add all new music files to database, and for you to play.</span>
+                <div class="mt-2" id="status"></div>
             </div>
+        </div>
     </div>
 
     <div id="root" class="container-fluid pb-4">
@@ -52,6 +51,10 @@
         var player = null;
         var playerController = null;
         var connected = null;
+
+        mediaEvent = function(e) {
+            console.log("holla holla");
+        };
 
         console.log(location.origin);
 
@@ -73,9 +76,22 @@
                     if(player.isConnected) {
                         connected = true;
                         console.log("player.isConnected");
+
+                        var session = cast.framework.CastContext.getInstance().getCurrentSession();
+                        console.log(session);
+                        session.addEventListener( cast.framework.SessionEventType.MEDIA_SESSION, mediaEvent);
+                        
+                        //if(media) {
+                        //    mediaEvent("fdfdf");
+                        //} else {
+                        //    console.log("Media nicht");
+                        //}
                     }
                 }
             );
+
+            
+
         };
 
     </script>
@@ -85,19 +101,26 @@
     class Motet extends React.Component {
         constructor(props) {
             super(props);
-            this.state = {info: { msg: null, type: null }};
+            this.state = {info: { msg: null, type: null }, media: null};
             this.handleInfoChange = this.handleInfoChange.bind(this);
+            this.handleNowPlaying = this.handleNowPlaying.bind(this);
         }
 
         handleInfoChange(info) {
             this.setState({info: info});
         }
 
+        handleNowPlaying(media) {
+            console.log("hej");
+            this.setState({media});
+        }
+
         render() {
             return (
                 <div>
                 <InfoBanner info={this.state.info}/>
-                <Songs onInfoChange={this.handleInfoChange}/>
+                <NowPlayingBanner media={this.state.media}/>
+                <Songs onInfoChange={this.handleInfoChange} onNowPlaying={this.handleNowPlaying} />
                 </div>
             );
         }
@@ -109,7 +132,7 @@
         }
 
         render() {
-
+            
             if(!this.props.info.msg) return (<div></div>);
 
             if(this.props.info.type == "error") {
@@ -128,6 +151,31 @@
         }
     }
 
+    class NowPlayingBanner extends React.Component {
+        constructor(props) {
+            super(props);
+        }
+
+        render() {
+            var meta = null;
+            if(this.props.media) {
+                meta = this.props.media.mediaSession.media.metadata;
+                //console.log(this.props.media.mediaSession.playerState);
+                //title = this.props.media.mediaSession.media.metadata.title;
+                //console.log(this.props.media.mediaSession.media.metadata);
+                //console.log(title);
+            }
+            if(meta) {
+                return (
+                    <div className="alert alert-danger" role="alert">
+                        {meta.title} {meta.albumName} {meta.artist}
+                    </div>
+                );
+            }
+            else return (<div></div>);
+        }
+    }
+
     class Songs extends React.Component {
         constructor(props) {
             super(props);
@@ -139,6 +187,7 @@
                 songs: [],
                 artist: null,
                 album: null,
+                nowplaying: false,
               };
 
             this.playMusic = this.playMusic.bind(this);
@@ -149,9 +198,20 @@
             this.getArtists_OnClick = this.getArtists_OnClick.bind(this);
             this.getArtistAlbums_OnClick = this.getArtistAlbums_OnClick.bind(this);
             this.getArtistAlbumSongs_OnClick = this.getArtistAlbumSongs_OnClick.bind(this);
+
+            //this.onMediaUpdate = this.props.onMediaUpdate.bind(this);
+
+            mediaEvent = this.props.onNowPlaying;
+        }
+
+        onMediaUpdate(media) {
+            console.log("onMediaUpdate");
+            console.log(this);
+            //this.props.onNowPlaying(media);
         }
 
         playQueue_OnClick(item, e) {
+            e.preventDefault();
             if(!connected) {
                 this.props.onInfoChange({msg: "Not connected", type: "error"});
             } else if(this.state.songs) {
@@ -318,10 +378,10 @@
 
         playQueue(queue) {
             if(connected) {
-                //var castSession = cast.framework.CastContext.getInstance().getCurrentSession().getSessionObj();
-                var media = cast.framework.CastContext.getInstance().getCurrentSession().getMediaSession();
+                var castSession = cast.framework.CastContext.getInstance().getCurrentSession().getSessionObj();
+                //var media = cast.framework.CastContext.getInstance().getCurrentSession().getMediaSession();
                 var request = new chrome.cast.media.QueueInsertItemsRequest(queue);
-                media.queueInsertItems(request,
+                castSession.queueLoad(request,
                 () => { 
                     this.props.onInfoChange({msg: null, type: null}); 
                     //var castSession = cast.framework.CastContext.getInstance().getCurrentSession().getSessionObj();
@@ -331,6 +391,7 @@
                         console.log("hep hep");
                         var media = cast.framework.CastContext.getInstance().getCurrentSession().getMediaSession();
                         console.log(media.items);
+                        //mediaEvent("djdjd");
                     }, (error) => {console.log(error);});
                 },
                 errorCode => {
@@ -410,7 +471,7 @@
         }
 
         getSongList(items) {
-            return (<div className="list-group list-group-flush">
+            return (<div className="list-group">
                     {items.map((item, index) => (
                         /*
                         <button key={'song' + index} type="button" onClick={(e) => this.playQueue_OnClick(item, e)} className="list-group-item list-group-item-action list-group-item-dark">
@@ -435,9 +496,9 @@
         }
 
         getAlbumsList(items) {
-            return (<div className="list-group list-group-flush">
+            return (<div className="list-group">
                     {items.map((album, index) => (
-                        <a key={'album' + index} id={encodeURIComponent(album)} href="#" onClick={(e) => this.getArtistAlbumSongs_OnClick(album, e)} className="list-group-item list-group-item-action">
+                        <a key={'album' + index} id={encodeURIComponent(album)} href="#" onClick={(e) => {e.preventDefault(); this.getArtistAlbumSongs_OnClick(album, e);}} className="list-group-item list-group-item-action">
                             {album}
                         </a>
                     ))}
@@ -445,21 +506,32 @@
         }
 
         getArtistsList(items) {
-            return (<div className="list-group list-group-flush">
+            return (<div className="list-group">
                     {items.map((artist, index) => (
-                        <a key={'artist' + index} id={encodeURIComponent(artist)} href="#" onClick={(e) => this.getArtistAlbums_OnClick(artist, e)} className="list-group-item list-group-item-action">
+                        <a key={'artist' + index} id={encodeURIComponent(artist)} href="#" onClick={(e) => {e.preventDefault(); this.getArtistAlbums_OnClick(artist, e);}} className="list-group-item list-group-item-action">
                             {artist}
                         </a>
                     ))}
                 </div>);
         }
 
+        selectLibraryView(e) {
+            this.setState({nowplaying: false});
+        }
+
+        selectNowPlayingView(e) {
+            this.setState({nowplaying: true});
+        }
+
         render() {
-            const { isLoaded, items, artists, albums, songs } = this.state;
+            const { isLoaded, items, artists, albums, songs, nowplaying } = this.state;
+            let ret;
             if (!isLoaded) {
               return <div><i className="fas fa-spinner fa-pulse"></i></div>;
+            } else if (nowplaying) {
+                ret = (<div>nowplaying</div>);
             } else if (artists) {
-                return (
+                ret = (
                     <div>
                     <nav aria-label="breadcrumb">
                         <ol className="breadcrumb">
@@ -470,11 +542,11 @@
                     </div>
               );
             } else if (albums) {
-                return (
+                ret = (
                     <div>
                     <nav aria-label="breadcrumb">
                         <ol className="breadcrumb">
-                            <li className="breadcrumb-item"><a href={"#" + encodeURIComponent(this.state.artist)} onClick={(e) => this.getArtists_OnClick(e)}>Artists</a></li>
+                            <li className="breadcrumb-item"><a href={"#" + encodeURIComponent(this.state.artist)} onClick={(e) => {e.preventDefault(); this.getArtists_OnClick(e);}}>Artists</a></li>
                             <li className="breadcrumb-item active" aria-current="page">{this.state.artist}</li>
                         </ol>
                     </nav>          
@@ -482,12 +554,12 @@
                     </div>
                 );
             } else if (songs) {
-                return (
+                ret = (
                     <div>
                     <nav aria-label="breadcrumb">
                         <ol className="breadcrumb">
-                            <li className="breadcrumb-item"><a href={"#" + encodeURIComponent(this.state.artist)} onClick={(e) => this.getArtists_OnClick(e)}>Artists</a></li>
-                            <li className="breadcrumb-item"><a href={"#" + encodeURIComponent(this.state.album)} onClick={(e) => this.getArtistAlbums_OnClick(this.state.artist, e)}>{this.state.artist}</a></li>
+                            <li className="breadcrumb-item"><a href={"#" + encodeURIComponent(this.state.artist)} onClick={(e) => {e.preventDefault(); this.getArtists_OnClick(e); }}>Artists</a></li>
+                            <li className="breadcrumb-item"><a href={"#" + encodeURIComponent(this.state.album)} onClick={(e) => {e.preventDefault(); this.getArtistAlbums_OnClick(this.state.artist, e); }}>{this.state.artist}</a></li>
                             <li className="breadcrumb-item active" aria-current="page">{this.state.album}</li>
                         </ol>
                     </nav>
@@ -496,6 +568,13 @@
                     </div>
                 );
             }
+
+            return (<div><div><nav className="nav nav-pills mb-2">
+                    <a className={"nav-link " + (!nowplaying ? "active" : "")} href="#" onClick={(e) => {e.preventDefault(); this.selectLibraryView(e); }}>Library</a>
+                    <a className={"nav-link " + (nowplaying ? "active" : "")} href="#" onClick={(e) => {e.preventDefault(); this.selectNowPlayingView(e); }}>Now Playing</a>
+                  </nav></div>
+                  {ret}
+                </div>);
         }
     }
 
@@ -612,7 +691,7 @@
     }
 
     ReactDOM.render(
-        <Motet />,
+        <Motet onMediaUpdate={mediaEvent}/>,
         document.getElementById('root')
     );
 
