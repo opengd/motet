@@ -188,6 +188,7 @@
                 artist: null,
                 album: null,
                 nowplaying: false,
+                hasError: false
               };
 
             this.playMusic = this.playMusic.bind(this);
@@ -536,7 +537,7 @@
 
         componentDidCatch(error, info) {
             // Display fallback UI
-            //this.setState({ hasError: true });
+            this.setState({ hasError: true });
             // You can also log the error to an error reporting service
             //logErrorToMyService(error, info);
             console.log(error);
@@ -552,10 +553,12 @@
         }
 
         render() {
-            const { isLoaded, items, artists, albums, songs, nowplaying } = this.state;
+            const { isLoaded, items, artists, albums, songs, nowplaying, hasError } = this.state;
             let ret;
-            if (!isLoaded) {
-              return <div><i className="fas fa-spinner fa-pulse"></i></div>;
+            if(hasError) {
+                return <div></div>;
+            } else if (!isLoaded) {
+              return <div></div>;
             } else if (nowplaying) {
                 ret = (<div>nowplaying</div>);
             } else if (artists) {
