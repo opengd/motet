@@ -246,7 +246,7 @@
 
         getArtists() {
             fetch(location.origin + '/artists')
-                .then(res => res.json())
+                .then(res => res.json(), error => {console.log(error);})
                 .then(result => {
                     this.props.onInfoChange({msg: null, type: null});
                     this.setState({
@@ -265,8 +265,9 @@
         }
 
         getArtistAlbums(artist) {
+            try {
             fetch(location.origin + '/artist/' + artist)
-                .then(res => res.json())
+                .then(res => res.json(), error => {console.log(error);})
                 .then(result => {
                     this.props.onInfoChange({msg: null, type: null});
                     this.setState({
@@ -283,11 +284,15 @@
                         isLoaded: false
                     });
                 })
+            } catch(error) {
+                console.error(error);
+            }
         }
 
         getArtistAlbumSongs(artist, album) {
+            try {
             fetch(location.origin + '/artist/' + artist + '/album/' + album)
-                .then(res => res.json())
+                .then(res => res.json(), error => {console.log(error);})
                 .then(result => {
                     this.props.onInfoChange({msg: null, type: null});
                     this.setState({
@@ -304,11 +309,15 @@
                         isLoaded: false
                     });
                 })
+            } catch(error) {
+                console.error(error);
+            }
         }
 
         getAlbums() {
+            try {
             fetch(location.origin + '/albums')
-                .then(res => res.json())
+                .then(res => res.json(), error => {console.log(error);})
                 .then(result => {
                     this.props.onInfoChange({msg: null, type: null});
                     this.setState({
@@ -322,6 +331,9 @@
                         isLoaded: false
                     });
                 })
+            } catch(error) {
+                console.error(error);
+            }
         }
 
         componentDidMount() {
