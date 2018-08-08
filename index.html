@@ -518,6 +518,8 @@
         }
 
         getArtistsList(items) {
+            if(!items) return (<div></div>); 
+            try {
             return (<div className="list-group">
                     {items.map((artist, index) => (
                         <a key={'artist' + index} id={encodeURIComponent(artist)} href="#" onClick={(e) => {e.preventDefault(); this.getArtistAlbums_OnClick(artist, e);}} className="list-group-item list-group-item-action">
@@ -525,6 +527,11 @@
                         </a>
                     ))}
                 </div>);
+            } catch (error) {
+                console.log(error);
+                return return (<div></div>); 
+            }
+
         }
 
         selectLibraryView(e) {
