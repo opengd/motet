@@ -19,7 +19,7 @@
 
     <div class="pos-f-t mb-2">
 
-        <nav class="navbar navbar-dark bg-dark">
+        <nav id="top" class="navbar navbar-dark bg-dark">
             <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarToggleExternalContent" aria-controls="navbarToggleExternalContent" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -104,6 +104,8 @@
             this.state = {info: { msg: null, type: null }, media: null};
             this.handleInfoChange = this.handleInfoChange.bind(this);
             this.handleNowPlaying = this.handleNowPlaying.bind(this);
+
+            this.mediaChanged = this.mediaChanged.bind(this);
         }
 
         handleInfoChange(info) {
@@ -111,8 +113,20 @@
         }
 
         handleNowPlaying(media) {
-            console.log("hej");
-            this.setState({media});
+            console.log("handleNowPlaying");
+            //this.setState({media});
+            if(media) media.mediaSession.addUpdateListener(this.mediaChanged);
+        }
+
+        mediaChanged(active) {
+            console.log("mediaChanged: " + active);
+            var media = cast.framework.CastContext.getInstance().getCurrentSession().getMediaSession();
+            if(active && media) {             
+                this.setState({media: media.media});
+                //console.log(metaData);
+            } else {
+                this.setState({media: null});
+            }
         }
 
         render() {
@@ -157,15 +171,22 @@
         }
 
         render() {
-            var meta = null;
-            if(this.props.media) {
-                meta = this.props.media.mediaSession.media.metadata;
+            //const {meta} = this.state;
+            //if(this.props.media) {
+                //meta = this.props.media.mediaSession.media.metadata;
+
+                
                 //console.log(this.props.media.mediaSession.playerState);
                 //title = this.props.media.mediaSession.media.metadata.title;
                 //console.log(this.props.media.mediaSession.media.metadata);
                 //console.log(title);
-            }
-            if(meta) {
+                //console.log(this.props.media.mediaSession.media.tracks);
+                //this.props.media.mediaSession.activeTrackIds.forEach(function(element) {
+                //    console.log(element);
+                //});
+            //}
+            if(this.props.media) {
+                var meta = this.props.media.metadata;
                 return (
                     <div className="alert alert-danger" role="alert">
                         {meta.title} {meta.albumName} {meta.artist}
@@ -342,13 +363,14 @@
         }
         
         componentDidUpdate() {
-            //console.log(window.location.hash.substr(1));
-
             var id = window.location.hash.substr(1);
+            const element = document.getElementById(id);
             
-            if(id) {
-                const element = document.getElementById(id);
-                if (element) element.scrollIntoView();
+            if(element) {
+                element.scrollIntoView({behavior: "instant", block: "center", inline: "nearest"});
+            } else {
+                const element = document.getElementById('top');
+                if (element) element.scrollIntoView({behavior: "smooth", inline: "nearest"});
             }
         }
 
@@ -394,18 +416,20 @@
                 var castSession = cast.framework.CastContext.getInstance().getCurrentSession().getSessionObj();
                 //var media = cast.framework.CastContext.getInstance().getCurrentSession().getMediaSession();
                 var request = new chrome.cast.media.QueueInsertItemsRequest(queue);
+
+                console.log(castSession.media);
                 castSession.queueLoad(request,
                 () => { 
                     this.props.onInfoChange({msg: null, type: null}); 
                     //var castSession = cast.framework.CastContext.getInstance().getCurrentSession().getSessionObj();
-                    var request = new chrome.cast.media.GetStatusRequest();
-                    var media = cast.framework.CastContext.getInstance().getCurrentSession().getMediaSession();
-                    media.getStatus(request, () => {
-                        console.log("hep hep");
-                        var media = cast.framework.CastContext.getInstance().getCurrentSession().getMediaSession();
-                        console.log(media.items);
+                    //var request = new chrome.cast.media.GetStatusRequest();
+                    //var media = cast.framework.CastContext.getInstance().getCurrentSession().getMediaSession();
+                    //media.getStatus(request, () => {
+                    //    console.log("hep hep");
+                    //    var media = cast.framework.CastContext.getInstance().getCurrentSession().getMediaSession();
+                    //    console.log(media.items);
                         //mediaEvent("djdjd");
-                    }, (error) => {console.log(error);});
+                    //}, (error) => {console.log(error);});
                 },
                 errorCode => {
                     this.props.onInfoChange({msg: errorCode, type: "error"});
@@ -532,7 +556,6 @@
                 console.log(error);
                 return (<div></div>); 
             }
-
         }
 
         componentDidCatch(error, info) {
@@ -577,7 +600,7 @@
                     <div>
                     <nav aria-label="breadcrumb">
                         <ol className="breadcrumb">
-                            <li className="breadcrumb-item"><a href={"#" + encodeURIComponent(this.state.artist)} onClick={(e) => {e.preventDefault(); this.getArtists_OnClick(e);}}>Artists</a></li>
+                            <li className="breadcrumb-item"><a href={"#" + encodeURIComponent(this.state.artist)} onClick={(e) => {this.getArtists_OnClick(e);}}>Artists</a></li>
                             <li className="breadcrumb-item active" aria-current="page">{this.state.artist}</li>
                         </ol>
                     </nav>          
@@ -589,8 +612,8 @@
                     <div>
                     <nav aria-label="breadcrumb">
                         <ol className="breadcrumb">
-                            <li className="breadcrumb-item"><a href={"#" + encodeURIComponent(this.state.artist)} onClick={(e) => {e.preventDefault(); this.getArtists_OnClick(e); }}>Artists</a></li>
-                            <li className="breadcrumb-item"><a href={"#" + encodeURIComponent(this.state.album)} onClick={(e) => {e.preventDefault(); this.getArtistAlbums_OnClick(this.state.artist, e); }}>{this.state.artist}</a></li>
+                            <li className="breadcrumb-item"><a href={"#" + encodeURIComponent(this.state.artist)} onClick={(e) => { this.getArtists_OnClick(e); }}>Artists</a></li>
+                            <li className="breadcrumb-item"><a href={"#" + encodeURIComponent(this.state.album)} onClick={(e) => { this.getArtistAlbums_OnClick(this.state.artist, e); }}>{this.state.artist}</a></li>
                             <li className="breadcrumb-item active" aria-current="page">{this.state.album}</li>
                         </ol>
                     </nav>
